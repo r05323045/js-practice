@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Login</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
       integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
 
@@ -52,6 +52,8 @@
             登入
           </button>
         </form>
+        <div v-if="loginStatus==='sucess'" class="text-sucess">登入成功，努力跳轉中</div>
+        <div v-if="loginStatus==='fail'" class="text-danger">登入失敗</div>
       </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
@@ -74,12 +76,15 @@
               email: '',
               password: '',
             },
+            loginStatus: ''
           };
         },
         methods: {
           signin() {
             const api = `https://course-ec-api.hexschool.io/api/auth/login`;
             axios.post(api, this.user).then((response) => {
+              this.loginStatus = 'sucess'
+
               const token = response.data.token;
               const expired = response.data.expired;
               // 寫入 cookie token
@@ -88,6 +93,7 @@
               window.location = 'Products.html';
             }).catch((error) => {
               console.log(error);
+              this.loginStatus = 'fail'
             });
           },
         },

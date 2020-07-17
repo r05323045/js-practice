@@ -1,6 +1,6 @@
-import pagination from './Pagination.js'
-import delProductModal from './DelProductModal.js'
-import productModal from './ProductModal.js'
+import pagination from './module/Pagination.js'
+import delProductModal from './module/DelProductModal.js'
+import productModal from './module/ProductModal.js'
 Vue.component('delProductModal', delProductModal);
 Vue.component('pagination', pagination)
 Vue.component('productModal', productModal);
