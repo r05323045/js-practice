@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+      integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  </head>
+
+  <body>
+    <div id="app" class="container">
+      <div class="text-right mt-4">
+        <button class="btn create-product" @click="openModal('new')">
+          ＋ ADD ITEM
+        </button>
+      </div>
+      <div class="table-wrapper">
+        <table class="table mt-4">
+          <thead class="thead-dark">
+            <tr>
+              <th v-for="name in columnName.title" :key="name">{{ name }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in products" :key="item.id">
+              <td class="td-img">
+                <div class="img-wrapper mx-auto my-auto">
+                  <img :src="item.imageUrl" class="product-image">
+                </div>
+              </td>
+              <td v-for="info in columnName.info" :key="info">{{ item[info] }}</td>
+              <td>
+                <div class="onoffswitch mx-auto align-middle">
+                  <input type="checkbox"  @click="switchToActive(item)" name="onoffswitch" class="onoffswitch-checkbox" :class="{ checked: item.enabled}" :id="`switch-${item.id}`" tabindex="0" checked>
+                  <label class="onoffswitch-label" :for="`switch-${item.id}`"></label>
+                </div>
+              </td>
+              <td>
+                <button class="btn btn-sm" @click="openModal('edit', item)" @mouseover="toolTip" data-toggle="tooltip" title="編輯產品">
+                    <i class="fa fa-edit fa-lg"></i>
+                </button>
+                <button class="btn btn-sm" @click="openModal('delete', item)" @mouseover="toolTip" data-toggle="tooltip" title="刪除產品">
+                    <i class="fa fa-trash fa-lg"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <pagination :pages="pagination" @emit-pages="getProducts" class="pagination-wrapper"></pagination>
+
+      <!-- Modal -->
+      <product-modal ref="productModel" :is-new="isNew" :user="user" @update="getProducts"></product-modal>
+
+      <del-product-modal :temp-product="tempProduct" :user="user" @update="getProducts"></del-product-modal>
+    </div>
+
+    <!-- modal 元件建立 -->
+    <script type="text/x-template" id="productModal">
+        <div id="productModal" class="modal fade">
+          <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content border-0">
+              <div class="modal-header">
+                <h5 class="modal-title">
+                  {{ this.modalView.title }}
+                </h5>
+                <i class="fa fa-times-circle fa-2x" data-dismiss="modal"></i>
+              </div>
+              <div class="modal-body">
+                <div class="row">
+                  <div class="col-sm-4">
+                    <div class="form-group">
+                      <label for="imageUrl">輸入圖片網址</label>
+                      <input id="imageUrl" v-model="tempProduct.imageUrl[0]" type="text" class="form-control"
+                        placeholder="請輸入圖片連結">
+                      <span v-show="!requiredData.imageUrl" class="text-danger validation">請輸入輸入圖片網址</span>
+                    </div>
+                    <div class="modal-img-wrapper text-center">
+                      <img class="img-fluid product-image" :src="tempProduct.imageUrl[0]" alt>
+                    </div>
+                  </div>
+                  <div class="col-sm-8">
+                    <div v-for="group in modalView.formGroups" class="form-row">
+                        <div v-for="item in group" class="form-group col-md-6">
+                            <label :for="item">{{ modalView.engToZh[item] }}</label>
+                            <input :id="item" v-model="tempProduct[item]" type="text" class="form-control"
+                                   :placeholder="item !== 'id'?`請輸入${modalView.engToZh[item]}`:'自動產生'" :disabled="item === 'id'">
+                            <span v-show="!requiredData[item]" class="text-danger validation">{{ `請輸入${modalView.engToZh[item]}` }}</span>
+                        </div>
+                    </div>
+                    <hr>
+                  </div>
+                  <div class="col-12">
+                    <div v-for="item in ['description', 'content']" class="form-group">
+                        <label :for="item">{{ modalView.engToZh[item] }}</label>
+                        <textarea :id="item" v-model="tempProduct[item]" type="text" class="form-control"
+                          :placeholder="`請輸入${modalView.engToZh[item]}`">
+                        </textarea>
+                        <span v-show="!requiredData[item]" class="text-danger validation">{{ `請輸入${modalView.engToZh[item]}` }}</span>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-check-label" for="enabled">是否啟用</label>
+                        <div class="mt-3">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" :value=true v-model="tempProduct.enabled">
+                                <label class="form-check-label">啟用</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" :value=false v-model="tempProduct.enabled">
+                                <label class="form-check-label">不啟用</label>
+                            </div>
+                        </div>
+                      </div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">
+                  取消
+                </button>
+                <button type="button" class="btn btn-primary" @click="updateProduct(tempProduct)">
+                  確認
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+    </script>
+
+    <script type="text/x-template" id="delProductModal">
+      <div id="delProductModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content border-0">
+            <div class="modal-header">
+              <h5 id="exampleModalLabel" class="modal-title">
+                <span>刪除產品</span>
+              </h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              是否刪除
+              <strong>{{ tempProduct.title }}</strong> 商品(刪除後將無法恢復)。
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">
+                取消
+              </button>
+              <button type="button" class="btn btn-danger" @click="delProduct">
+                確認刪除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </script>
+
+    <!-- 分頁元件建立 -->
+    <script type="text/x-template" id="pagination">
+      <nav aria-label="Page navigation">
+        <ul class="mt-5 pagination d-flex justify-content-center">
+          <li
+            class="page-item"
+            :class="{'disabled': pages.current_page === 1}"
+          >
+            <a
+              class="page-link"
+              href="#"
+              aria-label="Previous"
+              @click.prevent="emitPages(pages.current_page - 1)"
+            >
+              <span aria-hidden="true">&laquo;</span>
+            </a>
+          </li>
+          <li
+            v-for="(item, index) in pages.total_pages"
+            :key="index"
+            class="page-item"
+            :class="{'active': item === pages.current_page}"
+          >
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="emitPages(item)"
+            >{{ item }}</a>
+          </li>
+          <li
+            class="page-item"
+            :class="{'disabled': pages.current_page === pages.total_pages}"
+          >
+            <a
+              class="page-link"
+              href="#"
+              aria-label="Next"
+  
+              @click.prevent="emitPages(pages.current_page + 1)"
+            >
+              <span aria-hidden="true">&raquo;</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </script>
+
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+      integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous">
+      </script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+      integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous">
+      </script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+      integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous">
+      </script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+    <script type="module">
+      import pagination from '/Pagination.js'
+      import delProductModal from '/DelProductModal.js'
+      import productModal from '/ProductModal.js'
+      Vue.component('delProductModal', delProductModal);
+      Vue.component('pagination', pagination)
+      Vue.component('productModal', productModal);
+      new Vue({
+        el: '#app',
+        data() {
+          return {
+            columnName: {
+              title: ['', '分類', '產品名稱', '原價', '售價', '啟用', ' '],
+              info: ['category', 'title', 'origin_price', 'price'],
+            },
+            products: [],
+            pagination: {},
+            tempProduct: {
+              imageUrl: [],
+            },
+            isNew: false,
+            user: {
+              token: '',
+              uuid: '765c633d-f16f-4821-90b7-1588004cb252',
+            },
+          };
+        },
+        created() {
+          // 取得 token 的 cookies
+          // 詳情請見：https://developer.mozilla.org/zh-CN/docs/Web/API/Document/cookie
+          this.user.token = document.cookie.replace(/(?:(?:^|.*;\s*)token\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+          // 若無法取得 token 則返回 Login 頁面
+          if (this.user.token === '') {
+            window.location = 'Login.html';
+          }
+          this.getProducts();
+        },
+        methods: {
+          // 取得產品資料
+          getProducts(page = 1) {
+            const api = `https://course-ec-api.hexschool.io/api/${this.user.uuid}/admin/ec/products?page=${page}`;
+            //預設帶入 token
+            axios.defaults.headers.common.Authorization = `Bearer ${this.user.token}`;
+
+            axios.get(api).then((response) => {
+              this.products = response.data.data;
+              this.pagination = response.data.meta.pagination;
+            }).catch((error) => {
+              console.log(error)
+              window.location = 'Login.html';
+            })
+          },
+          // 開啟 Modal 視窗
+          openModal(isNew, item) {
+            switch (isNew) {
+              case 'new':
+                this.isNew = true;
+                this.$refs.productModel.clearTempProduct()
+                $('#productModal').modal('show');
+                break;
+              case 'edit':
+                this.tempProduct = Object.assign({}, item);
+                this.isNew = false;
+                this.$refs.productModel.getProduct(this.tempProduct.id);
+                break;
+              case 'delete':
+                $('#delProductModal').modal('show');
+                this.tempProduct = Object.assign({}, item);
+                break;
+              default:
+                break;
+            }
+          },
+          switchToActive(item) {
+            this.tempProduct = Object.assign({}, item);
+            this.tempProduct.enabled = !this.tempProduct.enabled 
+            this.isNew = false;
+            this.$refs.productModel.updateProduct(this.tempProduct)
+          },
+          toolTip() {
+            $('[data-toggle="tooltip"]').tooltip();
+          }
+        },
+      })
+    </script>
+  </body>
+
+</html>
