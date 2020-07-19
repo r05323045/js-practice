@@ -8,4 +8,4 @@
 
 ## Features
 - Can Manage the products by adding, editing and deleting
-- Have form validation in case user upload unvalid data
+- Have form validation in case user upload invalid data
